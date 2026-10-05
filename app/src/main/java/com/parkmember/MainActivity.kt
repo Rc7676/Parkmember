@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.format.DateUtils
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -19,6 +20,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -111,7 +114,7 @@ private fun ParkmemberApp() {
 
     var pickingDevice by remember { mutableStateOf(false) }
 
-    val hasBasePermissions = remember(version) { Permissions.hasLocation(context) && Permissions.hasBluetooth(context) }
+    val hasBasePermissions = remember(version) { Permissions.hasPreciseLocation(context) && Permissions.hasBluetooth(context) }
     val hasBackground = remember(version) { Permissions.hasBackgroundLocation(context) }
     val car = remember(version) { ParkingStore.carDevice(context) }
     val driving = remember(version) { ParkingStore.isDriving(context) }
@@ -161,7 +164,8 @@ private fun PermissionStep(onResult: () -> Unit) {
     SetupCard(
         title = "Step 1 of 3 · Permissions",
         body = "Parkmember needs Bluetooth access to notice when your phone connects to your car, " +
-            "and location access to remember where you parked.",
+            "and location access to remember where you parked. Choose \"Precise\" location: " +
+            "approximate location can be off by more than a kilometre.",
     ) {
         Button(onClick = { launcher.launch(Permissions.foregroundPermissions()) }) { Text("Grant permissions") }
         TextButton(onClick = { openAppSettings(context) }) { Text("Open app settings") }
@@ -199,10 +203,13 @@ private fun pairedDevices(context: Context): List<CarDevice>? {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DevicePicker(onPicked: (CarDevice) -> Unit, onCancel: (() -> Unit)?) {
     val context = LocalContext.current
     var refresh by remember { mutableIntStateOf(0) }
+    // Re-read when coming back from Bluetooth settings after pairing a new device.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { refresh++ }
     val devices = remember(refresh) { pairedDevices(context) }
 
     Column {
@@ -211,7 +218,7 @@ private fun DevicePicker(onPicked: (CarDevice) -> Unit, onCancel: (() -> Unit)?)
             body = "Pick your car's Bluetooth from the devices paired with this phone. " +
                 "When the phone disconnects from it, Parkmember saves where you are.",
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { refresh++ }) { Text("Refresh") }
                 OutlinedButton(onClick = {
                     context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
@@ -251,7 +258,12 @@ private fun MainScreen(car: CarDevice, driving: Boolean, spot: ParkedLocation?, 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip(onClick = {}, label = { Text(if (driving) "Driving" else "Parked") })
+                val status = when {
+                    driving -> "Driving"
+                    spot != null -> "Parked"
+                    else -> "Not parked yet"
+                }
+                AssistChip(onClick = {}, label = { Text(status) })
                 AssistChip(onClick = onChangeCar, label = { Text("Car: ${car.name}") })
             }
             if (spot != null) {
@@ -289,8 +301,13 @@ private fun MainScreen(car: CarDevice, driving: Boolean, spot: ParkedLocation?, 
                 onClick = {
                     saving = true
                     scope.launch {
-                        ParkingRecorder.recordParking(context, timeoutMillis = 15_000)
+                        val saved = ParkingRecorder.recordParking(context, timeoutMillis = 15_000)
                         saving = false
+                        Toast.makeText(
+                            context,
+                            if (saved != null) "Parking spot saved" else "Couldn't get your location. Is location turned on?",
+                            Toast.LENGTH_LONG,
+                        ).show()
                     }
                 },
                 modifier = Modifier.weight(1f),

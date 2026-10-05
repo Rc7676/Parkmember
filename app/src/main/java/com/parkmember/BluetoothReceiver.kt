@@ -20,21 +20,7 @@ class BluetoothReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val device = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
             ?: return
-        val car = ParkingStore.carDevice(context) ?: return
-        if (!device.address.equals(car.address, ignoreCase = true)) return
-
-        when (intent.action) {
-            BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                Log.i(TAG, "Connected to car ${car.name}")
-                ParkingStore.setDriving(context, true)
-                Notifications.clearParked(context)
-            }
-            BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                Log.i(TAG, "Disconnected from car ${car.name}, saving parking spot")
-                ParkingStore.setDriving(context, false)
-                if (!ParkingLocationService.start(context)) recordInline(context.applicationContext)
-            }
-        }
+        handleCarEvent(context, intent.action, device.address) { recordInline(context.applicationContext) }
     }
 
     /** Fallback if the foreground service can't be started: a quick fix within the broadcast window. */
@@ -52,5 +38,27 @@ class BluetoothReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "BluetoothReceiver"
+
+        /**
+         * Reacts to the car connecting or disconnecting. Ignores every other device.
+         * [recordWithoutService] runs if the foreground service can't be started.
+         */
+        fun handleCarEvent(context: Context, action: String?, address: String, recordWithoutService: () -> Unit) {
+            val car = ParkingStore.carDevice(context) ?: return
+            if (!address.equals(car.address, ignoreCase = true)) return
+
+            when (action) {
+                BluetoothDevice.ACTION_ACL_CONNECTED -> {
+                    Log.i(TAG, "Connected to car ${car.name}")
+                    ParkingStore.setDriving(context, true)
+                    Notifications.clearParked(context)
+                }
+                BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
+                    Log.i(TAG, "Disconnected from car ${car.name}, saving parking spot")
+                    ParkingStore.setDriving(context, false)
+                    if (!ParkingLocationService.start(context)) recordWithoutService()
+                }
+            }
+        }
     }
 }

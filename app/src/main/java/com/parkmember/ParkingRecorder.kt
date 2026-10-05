@@ -3,6 +3,7 @@ package com.parkmember
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
+import android.os.SystemClock
 import android.util.Log
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -16,9 +17,13 @@ import kotlinx.coroutines.withTimeoutOrNull
 object ParkingRecorder {
     private const val TAG = "ParkingRecorder"
 
+    /** An older cached fix may be from somewhere else entirely, e.g. where the drive started. */
+    private const val MAX_LAST_LOCATION_AGE_MILLIS = 2 * 60 * 1000L
+
     /**
      * Tries for a fresh, accurate fix for up to [timeoutMillis]; falls back to the last
-     * known location. Returns the saved spot, or null if no location was available.
+     * known location if it is recent. Returns the saved spot, or null if no usable location
+     * was available (the previous spot is then left untouched).
      */
     suspend fun recordParking(context: Context, timeoutMillis: Long): ParkedLocation? {
         val location = currentLocation(context, timeoutMillis) ?: return null
@@ -42,7 +47,7 @@ object ParkingRecorder {
                 client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancel.token).await()
             }
             if (fresh == null) cancel.cancel()
-            fresh ?: client.lastLocation.await()
+            fresh ?: client.lastLocation.await()?.takeIf { it.ageMillis() <= MAX_LAST_LOCATION_AGE_MILLIS }
         } catch (e: CancellationException) {
             throw e
         } catch (e: SecurityException) {
@@ -54,3 +59,6 @@ object ParkingRecorder {
         }
     }
 }
+
+private fun Location.ageMillis(): Long =
+    (SystemClock.elapsedRealtimeNanos() - elapsedRealtimeNanos) / 1_000_000

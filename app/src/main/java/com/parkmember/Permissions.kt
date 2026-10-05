@@ -26,6 +26,10 @@ object Permissions {
         granted(context, Manifest.permission.ACCESS_FINE_LOCATION) ||
             granted(context, Manifest.permission.ACCESS_COARSE_LOCATION)
 
+    /** "Approximate" location can be off by a kilometre or more, which is useless for finding a car. */
+    fun hasPreciseLocation(context: Context): Boolean =
+        granted(context, Manifest.permission.ACCESS_FINE_LOCATION)
+
     /** Needed so the spot can be saved while the app is closed (Android 10+). */
     fun hasBackgroundLocation(context: Context): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||

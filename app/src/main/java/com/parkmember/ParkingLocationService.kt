@@ -59,7 +59,10 @@ class ParkingLocationService : Service() {
 
         /** Returns false if Android refused to start the service. */
         fun start(context: Context): Boolean {
-            if (!Permissions.hasLocation(context)) return false
+            // Without background location Android refuses the location-type foreground service
+            // when the app is in the background; bail out before startForegroundService() so the
+            // system doesn't crash us for never calling startForeground().
+            if (!Permissions.hasLocation(context) || !Permissions.hasBackgroundLocation(context)) return false
             return try {
                 ContextCompat.startForegroundService(context, Intent(context, ParkingLocationService::class.java))
                 true
