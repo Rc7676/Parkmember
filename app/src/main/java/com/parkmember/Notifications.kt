@@ -14,8 +14,10 @@ import java.util.Date
 object Notifications {
     private const val CHANNEL_PARKED = "parked"
     private const val CHANNEL_WORKING = "working"
+    private const val CHANNEL_WATCHING = "watching"
     const val ID_WORKING = 1
     private const val ID_PARKED = 2
+    const val ID_WATCHING = 3
 
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -24,6 +26,12 @@ object Notifications {
         )
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_WORKING, "Saving parking location", NotificationManager.IMPORTANCE_LOW)
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_WATCHING, "Watching for your car", NotificationManager.IMPORTANCE_MIN).apply {
+                description = "Keeps Parkmember running so it can save your spot. You can hide this."
+                setShowBadge(false)
+            }
         )
     }
 
@@ -39,6 +47,17 @@ object Notifications {
         .setContentTitle("Saving where you parked…")
         .setOngoing(true)
         .setPriority(NotificationCompat.PRIORITY_LOW)
+        .build()
+
+    fun watching(context: Context, carName: String) = NotificationCompat.Builder(context, CHANNEL_WATCHING)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setContentTitle("Ready to remember where you park")
+        .setContentText("Watching for \u201C$carName\u201D to disconnect")
+        .setContentIntent(openAppIntent(context))
+        .setOngoing(true)
+        .setShowWhen(false)
+        .setPriority(NotificationCompat.PRIORITY_MIN)
+        .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
         .build()
 
     @SuppressLint("MissingPermission") // checked via Permissions.hasNotifications

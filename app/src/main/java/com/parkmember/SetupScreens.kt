@@ -61,7 +61,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 
-private const val TOTAL_STEPS = 3
+private const val TOTAL_STEPS = 4
 
 /**
  * Shared layout for the setup steps: brand header, progress, scrollable content,
@@ -315,5 +315,116 @@ private fun EmptyDevices(message: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+    }
+}
+
+// ---------------------------------------------------------------- Step 4
+
+/**
+ * Background-running settings. On Xiaomi/Redmi/POCO the app can't be woken up while closed
+ * unless Autostart is on, so those phones get extra shortcuts.
+ */
+@Composable
+fun KeepAliveStep(onDone: () -> Unit, isRevisit: Boolean) {
+    val context = LocalContext.current
+    var refresh by remember { mutableIntStateOf(0) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { refresh++ }
+    val batteryOk = remember(refresh) { KeepAlive.isIgnoringBatteryOptimizations(context) }
+    val xiaomi = KeepAlive.isXiaomi
+
+    SetupLayout(
+        step = if (isRevisit) null else 4,
+        title = "Keep it running",
+        body = if (xiaomi) {
+            "POCO, Xiaomi and Redmi phones stop apps that work in the background. " +
+                "Change these settings so Parkmember can save your spot even when it's closed."
+        } else {
+            "Let Parkmember run in the background so it can save your spot even when it's closed."
+        },
+        actions = { PrimaryButton(if (isRevisit) "Done" else "Finish setup", onDone) },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            SettingCard(
+                title = "Battery optimization",
+                subtitle = if (batteryOk) "Parkmember is allowed to run in the background"
+                else "Choose \u201CAllow\u201D so Android doesn't put Parkmember to sleep",
+                done = batteryOk,
+                button = "Allow",
+            ) { KeepAlive.requestIgnoreBatteryOptimizations(context) }
+
+            if (xiaomi) {
+                SettingCard(
+                    title = "Autostart",
+                    subtitle = "Turn on the switch next to Parkmember. Without it, Parkmember can't wake up when you park.",
+                    done = false,
+                    button = "Open",
+                ) { KeepAlive.openXiaomiAutostart(context) }
+                SettingCard(
+                    title = "Battery saver",
+                    subtitle = "Choose \u201CNo restrictions\u201D for Parkmember.",
+                    done = false,
+                    button = "Open",
+                ) { KeepAlive.openXiaomiBatterySaver(context) }
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    ),
+                ) {
+                    Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.Info, contentDescription = null)
+                        Text(
+                            "Tip: open your recent apps, long-press Parkmember and tap the lock " +
+                                "so the phone never closes it.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+
+            Row(
+                Modifier.padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    rememberVectorPainter(Icons.Filled.Notifications),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    "Parkmember keeps a small silent notification so it stays ready. " +
+                        "You can hide it by long-pressing it.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingCard(title: String, subtitle: String, done: Boolean, button: String, onClick: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (done) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = "Done", tint = MaterialTheme.colorScheme.secondary)
+            } else {
+                FilledTonalButton(onClick = onClick) { Text(button) }
+            }
+        }
     }
 }

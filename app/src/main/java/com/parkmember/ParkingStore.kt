@@ -23,6 +23,7 @@ object ParkingStore {
     private const val KEY_ACCURACY = "accuracy"
     private const val KEY_TIME = "time"
     private const val KEY_DRIVING = "driving"
+    private const val KEY_KEEP_ALIVE_DONE = "keep_alive_done"
 
     fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -42,6 +43,13 @@ object ParkingStore {
 
     fun setDriving(context: Context, driving: Boolean) = prefs(context).edit {
         putBoolean(KEY_DRIVING, driving)
+    }
+
+    /** Whether the user has been through the "keep it running" setup step. */
+    fun isKeepAliveSetupDone(context: Context): Boolean = prefs(context).getBoolean(KEY_KEEP_ALIVE_DONE, false)
+
+    fun setKeepAliveSetupDone(context: Context, done: Boolean) = prefs(context).edit {
+        putBoolean(KEY_KEEP_ALIVE_DONE, done)
     }
 
     fun parkedLocation(context: Context): ParkedLocation? {

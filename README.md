@@ -19,6 +19,13 @@ You can also tap **Save spot now** to save your location by hand.
 - On disconnect, `ParkingLocationService` (a short foreground service of type `location`) asks the
   Fused Location Provider for a fresh high-accuracy fix (up to 30 s, falling back to the last known
   location), saves it, posts a notification, and stops.
+- `CarWatcherService` is a small always-on foreground service (type `connectedDevice`, silent
+  notification) that keeps the process alive and listens for the car itself. Needed on phones such
+  as Xiaomi/Redmi/POCO, which refuse to start a closed app for a broadcast. `BootReceiver` restarts
+  it after a reboot or app update. When it's running, the manifest receiver steps aside so the spot
+  isn't saved twice.
+- Setup step 4 ("Keep it running") asks to skip battery optimization and, on Xiaomi/Redmi/POCO,
+  links straight to the Autostart and battery-saver screens.
 - Data is stored locally in SharedPreferences (`ParkingStore`) and never leaves the phone.
 - The map uses OpenStreetMap through osmdroid, so it needs no API key.
 
@@ -38,3 +45,17 @@ Open the project in Android Studio and run it, or:
 ```sh
 ./gradlew assembleDebug
 ```
+
+## Xiaomi / Redmi / POCO phones
+
+These phones block background apps by default. In setup step 4 (or the ⚙ button on the main
+screen) turn on:
+
+1. **Autostart** for Parkmember
+2. **Battery saver → No restrictions**
+3. Optional: in recent apps, long-press Parkmember and tap the lock icon
+
+## Signing
+
+`app/debug.keystore` is a throwaway debug key committed on purpose, so every CI build is signed
+the same way and installs as an update over the previous one.

@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -68,7 +69,14 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 @Composable
-fun MainScreen(car: CarDevice, driving: Boolean, spot: ParkedLocation?, onChangeCar: () -> Unit) {
+fun MainScreen(
+    car: CarDevice,
+    driving: Boolean,
+    spot: ParkedLocation?,
+    keepAliveOk: Boolean,
+    onChangeCar: () -> Unit,
+    onOpenKeepAlive: () -> Unit,
+) {
     var recenterRequests by remember { mutableIntStateOf(0) }
     // The map ends just under the sheet's rounded top, so the car pin (map center)
     // always sits in the middle of the visible map instead of hiding behind the sheet.
@@ -93,7 +101,7 @@ fun MainScreen(car: CarDevice, driving: Boolean, spot: ParkedLocation?, onChange
                 Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background.copy(alpha = 0.9f), Color.Transparent))
             )
         )
-        TopChips(car, onChangeCar)
+        TopChips(car, keepAliveOk, onChangeCar, onOpenKeepAlive)
 
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
             if (spot != null) {
@@ -125,7 +133,7 @@ fun MainScreen(car: CarDevice, driving: Boolean, spot: ParkedLocation?, onChange
 }
 
 @Composable
-private fun TopChips(car: CarDevice, onChangeCar: () -> Unit) {
+private fun TopChips(car: CarDevice, keepAliveOk: Boolean, onChangeCar: () -> Unit, onOpenKeepAlive: () -> Unit) {
     Row(
         Modifier.statusBarsPadding().fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -141,30 +149,47 @@ private fun TopChips(car: CarDevice, onChangeCar: () -> Unit) {
                 Text("Parkmember", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             }
         }
-        Surface(
-            onClick = onChangeCar,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 4.dp,
-        ) {
-            Row(
-                Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                onClick = onChangeCar,
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 4.dp,
             ) {
-                Icon(
-                    painterResource(R.drawable.ic_bluetooth),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    car.name,
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 150.dp),
-                )
+                Row(
+                    Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_bluetooth),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        car.name,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 110.dp),
+                    )
+                }
+            }
+            Surface(
+                onClick = onOpenKeepAlive,
+                shape = CircleShape,
+                color = if (keepAliveOk) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.errorContainer,
+                contentColor = if (keepAliveOk) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onErrorContainer,
+                shadowElevation = 4.dp,
+            ) {
+                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = if (keepAliveOk) "Background settings" else "Background settings need attention",
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
     }

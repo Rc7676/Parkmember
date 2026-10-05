@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 class BluetoothReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        // When the always-on watcher is alive it handles the event itself; don't save twice.
+        if (CarWatcherService.isRunning) return
         val device = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
             ?: return
         handleCarEvent(context, intent.action, device.address) { recordInline(context.applicationContext) }

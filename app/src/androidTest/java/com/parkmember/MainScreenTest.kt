@@ -1,11 +1,13 @@
 package com.parkmember
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -22,6 +24,7 @@ class MainScreenTest {
     fun setUp() {
         TestSupport.grantAllPermissions()
         TestSupport.resetStore()
+        ParkingStore.setKeepAliveSetupDone(context, true)
     }
 
     private fun launch(screenshotName: String, settleMillis: Long = 0, checks: () -> Unit) {
@@ -36,7 +39,7 @@ class MainScreenTest {
     @Test
     fun withoutCarShowsDevicePicker() = launch("1-choose-car") {
         compose.onNodeWithText("Choose your car").assertIsDisplayed()
-        compose.onNodeWithText("Step 3 of 3").assertIsDisplayed()
+        compose.onNodeWithText("Step 3 of 4").assertIsDisplayed()
         compose.onNodeWithText("Pair a new device").assertIsDisplayed()
     }
 
@@ -87,6 +90,45 @@ class MainScreenTest {
         } finally {
             TestSupport.shell("cmd uimode night no")
         }
+    }
+
+    @Test
+    fun keepAliveStepShownOnceThenMainScreen() {
+        ParkingStore.setKeepAliveSetupDone(context, false)
+        ParkingStore.setCarDevice(context, TEST_CAR)
+        launch("8-keep-running") {
+            compose.onNodeWithText("Keep it running").assertIsDisplayed()
+            compose.onNodeWithText("Step 4 of 4").assertIsDisplayed()
+            compose.onNodeWithText("Battery optimization").assertIsDisplayed()
+            compose.onNodeWithText("Finish setup").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Not parked yet").assertIsDisplayed()
+        }
+        assertTrue(ParkingStore.isKeepAliveSetupDone(context))
+    }
+
+    @Test
+    fun settingsButtonReopensKeepAliveStep() {
+        ParkingStore.setCarDevice(context, TEST_CAR)
+        launch("9-keep-running-revisit") {
+            compose.onNode(hasContentDescription("Background settings", substring = true)).performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Keep it running").assertIsDisplayed()
+            compose.onNodeWithText("Done").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Not parked yet").assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun watcherServiceStartsOnceSetUp() {
+        ParkingStore.setCarDevice(context, TEST_CAR)
+        ActivityScenario.launch(MainActivity::class.java).use {
+            val deadline = System.currentTimeMillis() + 10_000
+            while (!CarWatcherService.isRunning && System.currentTimeMillis() < deadline) Thread.sleep(200)
+            assertTrue("CarWatcherService should be running", CarWatcherService.isRunning)
+        }
+        assertTrue("watcher keeps running after the app closes", CarWatcherService.isRunning)
     }
 
     @Test

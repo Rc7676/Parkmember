@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,7 +50,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { Permissions, BackgroundLocation, PickCar, Main }
+private enum class Screen { Permissions, BackgroundLocation, PickCar, KeepAlive, Main }
 
 @Composable
 private fun ParkmemberApp() {
@@ -67,17 +68,26 @@ private fun ParkmemberApp() {
     }
 
     var pickingDevice by remember { mutableStateOf(false) }
+    var revisitingKeepAlive by remember { mutableStateOf(false) }
 
     val hasBasePermissions = remember(version) { Permissions.hasPreciseLocation(context) && Permissions.hasBluetooth(context) }
     val hasBackground = remember(version) { Permissions.hasBackgroundLocation(context) }
     val car = remember(version) { ParkingStore.carDevice(context) }
     val driving = remember(version) { ParkingStore.isDriving(context) }
     val spot = remember(version) { ParkingStore.parkedLocation(context) }
+    val keepAliveDone = remember(version) { ParkingStore.isKeepAliveSetupDone(context) }
+    val batteryOk = remember(version) { KeepAlive.isIgnoringBatteryOptimizations(context) }
+
+    // Keep the always-on watcher running whenever the app is set up.
+    LaunchedEffect(car, hasBasePermissions) {
+        if (car != null && hasBasePermissions) CarWatcherService.start(context)
+    }
 
     val screen = when {
         !hasBasePermissions -> Screen.Permissions
         !hasBackground -> Screen.BackgroundLocation
         car == null || pickingDevice -> Screen.PickCar
+        !keepAliveDone || revisitingKeepAlive -> Screen.KeepAlive
         else -> Screen.Main
     }
 
@@ -94,8 +104,23 @@ private fun ParkmemberApp() {
                 },
                 onCancel = if (car != null) ({ pickingDevice = false }) else null,
             )
+            Screen.KeepAlive -> KeepAliveStep(
+                isRevisit = keepAliveDone,
+                onDone = {
+                    ParkingStore.setKeepAliveSetupDone(context, true)
+                    revisitingKeepAlive = false
+                    version++
+                },
+            )
             Screen.Main -> if (car != null) {
-                MainScreen(car = car, driving = driving, spot = spot, onChangeCar = { pickingDevice = true })
+                MainScreen(
+                    car = car,
+                    driving = driving,
+                    spot = spot,
+                    keepAliveOk = batteryOk,
+                    onChangeCar = { pickingDevice = true },
+                    onOpenKeepAlive = { revisitingKeepAlive = true },
+                )
             }
         }
     }

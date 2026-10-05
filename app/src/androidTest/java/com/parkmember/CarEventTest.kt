@@ -27,6 +27,7 @@ class CarEventTest {
         TestSupport.grantAllPermissions()
         TestSupport.resetStore()
         ParkingStore.setCarDevice(context, TEST_CAR)
+        ParkingStore.setKeepAliveSetupDone(context, true)
     }
 
     private fun event(action: String, address: String, fallback: () -> Unit = {}) =
