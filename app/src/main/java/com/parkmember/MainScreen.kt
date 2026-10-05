@@ -38,8 +38,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -265,9 +265,10 @@ private fun BottomSheetCard(car: CarDevice, status: CarStatus, spot: ParkedLocat
 /** "Just now", "5 minutes ago", … — re-evaluated every 30 s so it stays current. */
 @Composable
 private fun relativeTime(timeMillis: Long): String {
-    val now by produceState(System.currentTimeMillis(), timeMillis) {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(timeMillis) {
         while (true) {
-            value = System.currentTimeMillis()
+            now = System.currentTimeMillis()
             delay(30_000)
         }
     }
