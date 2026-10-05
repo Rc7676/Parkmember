@@ -47,7 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,6 +70,10 @@ import org.osmdroid.views.overlay.Marker
 @Composable
 fun MainScreen(car: CarDevice, driving: Boolean, spot: ParkedLocation?, onChangeCar: () -> Unit) {
     var recenterRequests by remember { mutableIntStateOf(0) }
+    // The map ends just under the sheet's rounded top, so the car pin (map center)
+    // always sits in the middle of the visible map instead of hiding behind the sheet.
+    var sheetHeightPx by remember { mutableIntStateOf(0) }
+    val mapBottomInset = with(LocalDensity.current) { (sheetHeightPx.toDp() - 28.dp).coerceAtLeast(0.dp) }
     val status = when {
         driving -> CarStatus.Driving
         spot != null -> CarStatus.Parked
@@ -76,7 +82,7 @@ fun MainScreen(car: CarDevice, driving: Boolean, spot: ParkedLocation?, onChange
 
     Box(Modifier.fillMaxSize()) {
         if (spot != null) {
-            ParkingMap(spot, recenterRequests, Modifier.fillMaxSize())
+            ParkingMap(spot, recenterRequests, Modifier.fillMaxSize().padding(bottom = mapBottomInset))
         } else {
             EmptyBackdrop()
         }
@@ -113,7 +119,7 @@ fun MainScreen(car: CarDevice, driving: Boolean, spot: ParkedLocation?, onChange
                     }
                 }
             }
-            BottomSheetCard(car, status, spot)
+            BottomSheetCard(car, status, spot, Modifier.onSizeChanged { sheetHeightPx = it.height })
         }
     }
 }
@@ -165,7 +171,7 @@ private fun TopChips(car: CarDevice, onChangeCar: () -> Unit) {
 }
 
 @Composable
-private fun BottomSheetCard(car: CarDevice, status: CarStatus, spot: ParkedLocation?) {
+private fun BottomSheetCard(car: CarDevice, status: CarStatus, spot: ParkedLocation?, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var saving by remember { mutableStateOf(false) }
@@ -174,7 +180,7 @@ private fun BottomSheetCard(car: CarDevice, status: CarStatus, spot: ParkedLocat
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 16.dp,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(Modifier.navigationBarsPadding().padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 20.dp)) {
             Box(
