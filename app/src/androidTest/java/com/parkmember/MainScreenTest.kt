@@ -35,7 +35,8 @@ class MainScreenTest {
 
     @Test
     fun withoutCarShowsDevicePicker() = launch("1-choose-car") {
-        compose.onNodeWithText("Step 3 of 3 · Choose your car").assertIsDisplayed()
+        compose.onNodeWithText("Choose your car").assertIsDisplayed()
+        compose.onNodeWithText("Step 3 of 3").assertIsDisplayed()
         compose.onNodeWithText("Pair a new device").assertIsDisplayed()
     }
 
@@ -44,8 +45,9 @@ class MainScreenTest {
         ParkingStore.setCarDevice(context, TEST_CAR)
         launch("2-no-spot-yet") {
             compose.onNodeWithText("Not parked yet").assertIsDisplayed()
-            compose.onNodeWithText("Car: Test Car").assertIsDisplayed()
+            compose.onNodeWithText("Test Car").assertIsDisplayed()
             compose.onNodeWithText("Save spot now").assertIsDisplayed()
+            compose.onNodeWithText("No spot saved yet").assertIsDisplayed()
         }
     }
 
@@ -69,6 +71,21 @@ class MainScreenTest {
             compose.onNodeWithText("Parked").assertIsDisplayed()
             compose.onNodeWithText("Walk to car").assertIsDisplayed()
             compose.onNodeWithText("Accuracy about 8 m").assertIsDisplayed()
+            compose.onNodeWithText("5 minutes ago").assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun darkModeParkedScreen() {
+        ParkingStore.setCarDevice(context, TEST_CAR)
+        ParkingStore.setParkedLocation(context, ParkedLocation(TEST_LAT, TEST_LON, 8f, System.currentTimeMillis()))
+        TestSupport.shell("cmd uimode night yes")
+        try {
+            launch("7-parked-dark", settleMillis = 4_000) {
+                compose.onNodeWithText("Just now").assertIsDisplayed()
+            }
+        } finally {
+            TestSupport.shell("cmd uimode night no")
         }
     }
 
@@ -76,9 +93,9 @@ class MainScreenTest {
     fun changeCarOpensPickerWithCancel() {
         ParkingStore.setCarDevice(context, TEST_CAR)
         launch("6-change-car") {
-            compose.onNodeWithText("Car: Test Car").performClick()
+            compose.onNodeWithText("Test Car").performClick()
             compose.waitForIdle()
-            compose.onNodeWithText("Step 3 of 3 · Choose your car").assertIsDisplayed()
+            compose.onNodeWithText("Choose your car").assertIsDisplayed()
             compose.onNodeWithText("Cancel").assertIsDisplayed()
         }
     }

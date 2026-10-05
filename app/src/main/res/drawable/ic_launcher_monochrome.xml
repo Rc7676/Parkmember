@@ -6,7 +6,7 @@
             android:pathData="M12,2C8.13,2 5,5.13 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.87 -3.13,-7 -7,-7z" />
     </group>
     <group android:translateX="54" android:translateY="47.4">
-        <path android:fillColor="#1A56DB" android:fillType="evenOdd"
+        <path android:fillColor="#000000" android:fillType="evenOdd"
             android:pathData="M-5.5,-8.5 H1.5 A5,5 0 0 1 1.5,1.5 H-1.5 V8.5 H-5.5 Z M-1.5,-5 V-2 H1.5 A1.5,1.5 0 0 0 1.5,-5 Z" />
     </group>
 </vector>
