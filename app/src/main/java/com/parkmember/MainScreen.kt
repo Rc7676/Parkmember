@@ -1,5 +1,7 @@
 package com.parkmember
 
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -62,7 +64,6 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.TilesOverlay
 
 @Composable
 fun MainScreen(car: CarDevice, driving: Boolean, spot: ParkedLocation?, onChangeCar: () -> Unit) {
@@ -345,8 +346,20 @@ private fun ParkingMap(spot: ParkedLocation, recenterRequests: Int, modifier: Mo
     }
 
     AndroidView(factory = { mapView }, modifier = modifier, update = { map ->
-        map.overlayManager.tilesOverlay.setColorFilter(if (dark) TilesOverlay.INVERTED_COLORS else null)
+        map.overlayManager.tilesOverlay.setColorFilter(if (dark) DarkTilesFilter else null)
         marker.position = point
         map.invalidate()
     })
 }
+
+/** Inverts map tile colors for a night-friendly map in dark mode. */
+private val DarkTilesFilter = ColorMatrixColorFilter(
+    ColorMatrix(
+        floatArrayOf(
+            -1f, 0f, 0f, 0f, 255f,
+            0f, -1f, 0f, 0f, 255f,
+            0f, 0f, -1f, 0f, 255f,
+            0f, 0f, 0f, 1f, 0f,
+        )
+    )
+)
