@@ -91,3 +91,16 @@ jobs:
             app/build/outputs/androidTest-results/
             qa-screenshots/
           if-no-files-found: ignore
+
+      - name: Publish screenshots to "qa-screenshots" release
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: qa-screenshots
+          name: QA screenshots (latest emulator run)
+          prerelease: true
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          body: "Emulator screenshots from ${{ github.ref_name }} @ ${{ github.sha }}"
+          files: qa-screenshots/*.png
+          fail_on_unmatched_files: false
