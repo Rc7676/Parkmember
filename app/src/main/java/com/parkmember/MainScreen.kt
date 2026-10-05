@@ -220,16 +220,15 @@ private fun BottomSheetCard(car: CarDevice, status: CarStatus, spot: ParkedLocat
             }
 
             Spacer(Modifier.height(24.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (spot != null) {
                     Button(
                         onClick = { navigateTo(context, spot) },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
                     ) {
                         Icon(painterResource(R.drawable.ic_walk), contentDescription = null)
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text("Walk to car", style = MaterialTheme.typography.titleSmall)
+                        Text("Walk to car", style = MaterialTheme.typography.titleMedium)
                     }
                 }
                 FilledTonalButton(
@@ -246,16 +245,18 @@ private fun BottomSheetCard(car: CarDevice, status: CarStatus, spot: ParkedLocat
                             ).show()
                         }
                     },
-                    modifier = Modifier.weight(1f).height(56.dp),
-                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+                    modifier = Modifier.fillMaxWidth().height(if (spot != null) 48.dp else 56.dp),
                 ) {
                     if (saving) {
                         CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     } else {
-                        Icon(Icons.Filled.LocationOn, contentDescription = null)
+                        Icon(Icons.Filled.LocationOn, contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
                     }
                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                    Text(if (saving) "Saving…" else "Save spot now", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        if (saving) "Saving…" else "Save spot now",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
                 }
             }
         }
@@ -353,7 +354,10 @@ private fun ParkingMap(spot: ParkedLocation, recenterRequests: Int, modifier: Mo
     })
 }
 
-/** Inverts map tile colors for a night-friendly map in dark mode. */
+/**
+ * Night map: invert the tiles, then rotate hue by 180° so roads, parks and water keep
+ * roughly their usual colors on a dark background.
+ */
 private val DarkTilesFilter = ColorMatrixColorFilter(
     ColorMatrix(
         floatArrayOf(
@@ -362,5 +366,16 @@ private val DarkTilesFilter = ColorMatrixColorFilter(
             0f, 0f, -1f, 0f, 255f,
             0f, 0f, 0f, 1f, 0f,
         )
-    )
+    ).apply {
+        postConcat(
+            ColorMatrix(
+                floatArrayOf(
+                    -0.574f, 1.430f, 0.144f, 0f, 0f,
+                    0.426f, 0.430f, 0.144f, 0f, 0f,
+                    0.426f, 1.430f, -0.856f, 0f, 0f,
+                    0f, 0f, 0f, 1f, 0f,
+                )
+            )
+        )
+    }
 )
